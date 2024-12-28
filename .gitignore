@@ -1,0 +1,9 @@
+# Build and Release Folders
+Debug/
+SFMLProject1/Debug/
+Release/
+SFMLProject1/Release/
+
+# Other files and folders
+.settings/
+.vs/
