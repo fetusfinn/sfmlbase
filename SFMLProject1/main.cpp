@@ -1,78 +1,43 @@
 //
-//  Week 2 exercies
+//  Base project for a 2d SFML powered game
 //
-#include <SFML/Graphics.hpp>
-#include <iostream>
 
-#include "physics.h"
-#include "bezier.h"
+#include "draw.h"
+#include "shapes.h"
 
-//
-// Generates a random number within the given range
-//
-inline int RandomInt(int min, int max)
-{
-	if (max < min)
-		return 0;
+/* TODO
+ *
+ * x draw list
+ * - notifications
+ * - keypress handler
+ * - font map
+ *
+ * - saving system
+ *   - json
+ *
+ * ? scripting
+ * ? thread pool
+ *
+ * - print macros
+ *
+ *
+ *
+ * TODO LATER
+ *
+ * - decouple the update ticks and render frames
+ * - render batching
+ *	 - use sf::VertexArrays
+ *
+ */
 
-	return rand() % (max - min + 1) + min;
-}
+// how many frames we're aiming for each second
+constexpr float target_fps = 60.f;
 
-//
-// Fades between the wo given colours, fades from col1 to col2
-//
-sf::Color FadeBetween(const sf::Color& _rCol1, const sf::Color& _rCol2, float _fPercent)
-{
-	// Ensure percentage is clamped between 0 and 1
-	if (_fPercent > 1.f)
-		_fPercent = 1.f;
+// the duration of a tick
+constexpr float time_step	 = 1.f / target_fps;
 
-	if (_fPercent < 0.f)
-		_fPercent = 0.f;
-
-	// Lerp each base colour
-	sf::Uint8 r = static_cast<sf::Uint8>(_rCol1.r + _fPercent * (_rCol2.r - _rCol1.r));
-	sf::Uint8 g = static_cast<sf::Uint8>(_rCol1.g + _fPercent * (_rCol2.g - _rCol1.g));
-	sf::Uint8 b = static_cast<sf::Uint8>(_rCol1.b + _fPercent * (_rCol2.b - _rCol1.b));
-	sf::Uint8 a = static_cast<sf::Uint8>(_rCol1.a + _fPercent * (_rCol2.a - _rCol1.a));
-
-	return { r, g, b, a };
-}
-
-//
-// Function to handle the fading between an array of colors
-//
-sf::Color FadeBetween(const std::vector<sf::Color>& colors, float elapsedTime, float fadeDuration, bool loop)
-{
-	size_t colorCount = colors.size();
-
-	// If there is only one color, just return it
-	if (colorCount < 2)
-		return colors[0]; 
-
-	// Calculate the total time required to fade between each color in sequence
-	float totalDuration = fadeDuration * (colorCount - 1);
-
-	// If not looping and the fade is complete, return the last color
-	if (!loop && elapsedTime >= totalDuration) 
-		return colors.back();
-
-	// Calculate the current segment based on elapsed time
-	float timeInCycle = fmod(elapsedTime, totalDuration);
-	int currentColorIndex = static_cast<int>(timeInCycle / fadeDuration);
-
-	// Get the two colors to interpolate between
-	sf::Color startColor = colors[currentColorIndex];
-	sf::Color endColor = colors[(currentColorIndex + 1) % colorCount]; // Wrap around if looping
-
-	// Calculate the percentage between the two colors
-	float percentage = (timeInCycle - currentColorIndex * fadeDuration) / fadeDuration;
-
-	// Interpolate between the two colors
-	return FadeBetween(startColor, endColor, percentage);
-}
-
-
+// our main draw list
+draw_list_t g_draw;
 
 //
 //
@@ -83,117 +48,111 @@ int main()
 	std::srand(std::time(nullptr));
 
 	// Create the window with a set resolution:
-	sf::RenderWindow rWindow(sf::VideoMode(1280, 720), "SFML Project");
+	sf::RenderWindow window(sf::VideoMode(1280, 720), "SFML Base");
 
 	// Set the frame rate limit
-	rWindow.setFramerateLimit(Physics::fTimeStep);
+	window.setFramerateLimit(target_fps);
 
-	// Our circle for our control points
-	sf::CircleShape rCircle;
-	rCircle.setPointCount(10);
-	rCircle.setRadius(10);
-	rCircle.setOrigin(10, 10);
-	rCircle.setFillColor(sf::Color::Transparent);
-	rCircle.setOutlineColor(sf::Color::White);
-	rCircle.setOutlineThickness(2);
+	// clock to track our delta time
+	sf::Clock clock;
 
-	// Create our curve
-	CBezier rCurve(vec2(0, 360), vec2(300, 150), vec2(800, 500), vec2(1280, 360));
+	// the delta time between ticks
+	sf::Time delta;
 
+	// what tick we're on
+	float tick = 0;
 
-	// Clock to keep track of our fade
-	sf::Clock rFadeClock;
-
-	// How many seconds we want to take to fade
-	float fFadeDur = 5.f;
-
-	sf::Color rFade[2] = { sf::Color::White, sf::Color::Blue };
+	bool bnotif = false;
 
 	//
 	// For as long as the window's open
 	//
-	while (rWindow.isOpen())
+	while (window.isOpen())
 	{
+		// get the delta and restart our clock
+		delta = clock.restart();
+
+		tick++;
+
+		// clear our draw list for us to reuse this frame
+		g_draw.clear();
+
 		//
 		// Event handling
 		//
 		{
 			sf::Event rEvent;
-			while (rWindow.pollEvent(rEvent))
+			while (window.pollEvent(rEvent))
 			{
 				switch (rEvent.type)
 				{
 				case sf::Event::Closed:
-					rWindow.close();
+					window.close();
 					break;
-
-				
-
 				}
 			}
 		}
 
 		//
-		// Keypress
+		// Updating
 		//
 		{
-			// Left click to move the first control point
-			if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
+			// draw what tick we're on
+			g_draw.push(shape::text(), 0, [&tick](sf::Text& _t)
 			{
-				rCurve.SetControlPos(POINT_A, static_cast<vec2>(sf::Mouse::getPosition(rWindow)));
-			}
+				_t.setPosition(10, 100 + 30);
+				_t.setFillColor(sf::Color::White);
+				_t.setString("Frame : " + std::to_string((int)tick));
+				_t.setCharacterSize(15);
+			});
 
-			// Right click to move the second control point
-			if (sf::Mouse::isButtonPressed(sf::Mouse::Right))
+			// draw what tick we're on
+			g_draw.push(shape::text(), 0, [&tick](sf::Text& _t)
 			{
-				rCurve.SetControlPos(POINT_B, static_cast<vec2>(sf::Mouse::getPosition(rWindow)));
-			}
-		}
+				_t.setPosition(10, 100 + 60);
+				_t.setFillColor(sf::Color::Blue);
+				_t.setString("Tick : " + std::to_string((int)tick));
+				_t.setCharacterSize(15);
+			});
 
-		//
-		// Functionality
-		//
-		{
-			rCurve.Update();
-		}
-
-		//
-		// Colour fade
-		//
-		{
-			// Calculate the percentage of the fade completed based on time
-			float fElapsed = rFadeClock .getElapsedTime().asSeconds();
-			float fPercent = fElapsed / fFadeDur;
-
-			// Get the current color by interpolating between start colour and end colour
-			sf::Color rFadeCol = FadeBetween(rFade[0], rFade[1], fPercent);
-
-			// Apply the color to the rectangle
-			rCurve.SetColour(rFadeCol);
-
-			// If the fade is complete, reset the clock to loop
-			if (fPercent >= 1.f)
+			// draw what tick we're on
+			g_draw.push(shape::text(), 0, [&tick](sf::Text& _t)
 			{
-				// Swap our colours so it bounces between the colours
-				std::swap(rFade[0], rFade[1]);
+				_t.setPosition(10, 100 + 90);
+				_t.setFillColor(sf::Color::Red);
+				_t.setString("Frame : " + std::to_string((int)tick));
+				_t.setCharacterSize(15);
+			});
 
-				// Restart clock for looping the fade
-				rFadeClock.restart();
-			}
+			// draw what tick we're on
+			g_draw.push(shape::text(), 0, [&tick](sf::Text& _t)
+			{
+				_t.setPosition(10, 100 + 120);
+				_t.setFillColor(sf::Color::Green);
+				_t.setString("Tick : " + std::to_string((int)tick));
+				_t.setCharacterSize(15);
+			});
+
+			// draw what tick we're on
+			g_draw.push(shape::text(), 0, [&tick](sf::Text& _t)
+			{
+				_t.setPosition(10, 100 + 150);
+				_t.setFillColor(sf::Color::Yellow);
+				_t.setString("Frame : " + std::to_string((int)tick));
+				_t.setCharacterSize(15);
+			});
+
 		}
-
-		
-
 
 		//
 		// Drawing
 		//
-		//rWindow.clear(sf::Color::White);
-		rWindow.clear(sf::Color::Black);
+		//window.clear(sf::Color::White);
+		window.clear(sf::Color::Black);
 		{
-			rCurve.Draw(rWindow, rCircle);
+			g_draw.draw(window);
 		}
-		rWindow.display();
+		window.display();
 	}
 
 	return 0;

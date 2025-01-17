@@ -12,15 +12,18 @@
     <ClCompile Include="main.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="bezier.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="physics.h">
+    <ClInclude Include="draw.h">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="bezier.h">
+    <ClInclude Include="priority.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="shapes.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="defines.h">
       <Filter>Headers</Filter>
     </ClInclude>
   </ItemGroup>

@@ -150,18 +150,22 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="bezier.cpp">
-      <SubType>
-      </SubType>
-    </ClCompile>
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="bezier.h">
+    <ClInclude Include="defines.h">
       <SubType>
       </SubType>
     </ClInclude>
-    <ClInclude Include="physics.h" />
+    <ClInclude Include="draw.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
+    <ClInclude Include="priority.h" />
+    <ClInclude Include="shapes.h">
+      <SubType>
+      </SubType>
+    </ClInclude>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
